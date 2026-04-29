@@ -1,6 +1,6 @@
 # Overview
 
-[Scroll Assistant](https://github.com/Pasta-Devs/Marinara-Engine) provides buttons to scroll your roleplay and convo chats. (It it disabled in GM mode). 
+An extension for [Marinara Engine](https://github.com/Pasta-Devs/Marinara-Engine) to alter scrolling behavior.
 
 ## Usage
 
