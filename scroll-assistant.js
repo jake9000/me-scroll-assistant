@@ -57,7 +57,7 @@
   const autoscrollInterop = getAutoscrollInterop();
   let _viewportResizeTimer = null;
   const state = {
-    options: loadOptions(),
+    options: { ...DEFAULT_OPTIONS },
     root: null,
     upButton: null,
     downButton: null,
@@ -81,20 +81,15 @@
     dragRef: null,
   };
   const instanceToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  let disposed = false;
+  let persistQueue = Promise.resolve();
   if (window[PATCH_KEY] && typeof window[PATCH_KEY].restore === "function") {
     markDuplicateInstanceAttempt();
     return;
   }
   registerInstance(instanceToken);
-  state.trace.enabled = !!state.options.debugTrace;
-  installNativeAutoscrollHook();
-  ensureStyle();
-  createButtons();
-  applySideOption();
-  mountOptionsPanel();
-  bindObservers();
-  rescan();
   const restore = () => {
+    disposed = true;
     unregisterInstance(instanceToken);
     if (state.detachScrollerScroll) {
       state.detachScrollerScroll();
@@ -139,6 +134,19 @@
     typeof marinara.onCleanup === "function"
   ) {
     marinara.onCleanup(restore);
+  }
+  void initialize();
+  async function initialize() {
+    state.options = await loadOptions();
+    if (disposed) return;
+    state.trace.enabled = !!state.options.debugTrace;
+    installNativeAutoscrollHook();
+    ensureStyle();
+    createButtons();
+    applySideOption();
+    mountOptionsPanel();
+    bindObservers();
+    rescan();
   }
   function getInstanceTracker() {
     const existing = window[INSTANCE_TRACKER_KEY];
@@ -412,16 +420,46 @@
     styleTag.textContent = ` #${ROOT_ID} { position: fixed; z-index: 9998; display: none; flex-direction: column; gap: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; } #${ROOT_ID}.mari-show { display: inline-flex; } #${ROOT_ID}.mari-side-left { left: max(2px, calc(env(safe-area-inset-left, 0px) + 2px)); } #${ROOT_ID}.mari-side-right { right: max(2px, calc(env(safe-area-inset-right, 0px) + 2px)); } #${ROOT_ID} .mari-scroll-btn { width: 42px; height: 42px; border-radius: 999px; border: 1px solid var(--border, rgba(255, 255, 255, 0.22)); background: color-mix(in srgb, var(--card, #10131a) 90%, transparent); color: var(--foreground, #f8fafc); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35); cursor: pointer; font-size: 19px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: transform 120ms ease, opacity 120ms ease, background-color 120ms ease; pointer-events: auto; user-select: none; touch-action: manipulation; } #${ROOT_ID} .mari-scroll-btn:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--accent, #1f2937) 90%, transparent); } #${ROOT_ID} .mari-scroll-btn:active { transform: translateY(0); } #${ROOT_ID} .mari-scroll-btn.mari-disabled { opacity: 0.44; } #${ROOT_ID} .mari-scroll-btn.mari-hold { opacity: 0.82; } #${ROOT_ID} .mari-scroll-btn:focus-visible { outline: 2px solid var(--accent, #7dd3fc); outline-offset: 2px; } [${PANEL_ATTR}="true"] { margin-top: 8px; padding: 10px; border: 1px solid var(--border, rgba(255, 255, 255, 0.18)); border-radius: 8px; background: color-mix(in srgb, var(--secondary, #1f2531) 55%, transparent); } [${PANEL_ATTR}="true"] .mari-sa-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--foreground, #f5f5f5); } [${PANEL_ATTR}="true"] .mari-sa-grid { display: grid; grid-template-columns: 1fr; gap: 8px; } [${PANEL_ATTR}="true"] label { display: grid; gap: 4px; font-size: 12px; color: var(--foreground, #f5f5f5); } [${PANEL_ATTR}="true"] select { width: 100%; border: 1px solid var(--border, rgba(255, 255, 255, 0.2)); border-radius: 6px; background: var(--background, #0f1420); color: var(--foreground, #f5f5f5); font-size: 12px; padding: 6px 8px; } [${PANEL_ATTR}="true"] .mari-sa-binding-row { display: flex; align-items: center; gap: 8px; } [${PANEL_ATTR}="true"] .mari-sa-percent-wrap { display: inline-flex; align-items: center; gap: 4px; } [${PANEL_ATTR}="true"] .mari-sa-percent-input { width: 48px; border: 1px solid var(--border, rgba(255, 255, 255, 0.2)); border-radius: 6px; background: var(--background, #0f1420); color: var(--foreground, #f5f5f5); font-size: 12px; padding: 6px 8px; text-align: right; } [${PANEL_ATTR}="true"] .mari-sa-percent-symbol { font-size: 12px; opacity: 0.85; } [${PANEL_ATTR}="true"] .mari-sa-note { margin-top: 8px; opacity: 0.78; font-size: 11px; } [${PANEL_ATTR}="true"] .mari-sa-warning { margin-bottom: 8px; padding: 7px 8px; border: 1px solid color-mix(in srgb, #f59e0b 58%, transparent); border-radius: 6px; background: color-mix(in srgb, #7c2d12 38%, transparent); color: #fde68a; font-size: 11px; line-height: 1.35; } [${PANEL_ATTR}="true"] .mari-sa-check { display: inline-flex; align-items: center; gap: 8px; } [${PANEL_ATTR}="true"] .mari-sa-check input[type="checkbox"] { width: 14px; height: 14px; } [${PANEL_ATTR}="true"] .mari-sa-actions { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } [${PANEL_ATTR}="true"] .mari-sa-actions button { border: 1px solid var(--border, rgba(255, 255, 255, 0.2)); border-radius: 6px; background: var(--background, #0f1420); color: var(--foreground, #f5f5f5); font-size: 11px; padding: 4px 8px; cursor: pointer; } [${PANEL_ATTR}="true"] .mari-sa-actions-note { opacity: 0.8; font-size: 11px; } .mari-sa-toggle-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border, rgba(255, 255, 255, 0.2)); background: transparent; color: var(--foreground, #f8fafc); cursor: pointer; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; line-height: 1; user-select: none; touch-action: manipulation; transition: transform 220ms ease, background-color 120ms ease; flex-shrink: 0; margin-left: auto; } .mari-sa-toggle-btn:hover { background: color-mix(in srgb, var(--accent, #1f2937) 40%, transparent); } .mari-sa-toggle-btn.mari-toggle-open { transform: rotate(90deg); } [${PANEL_ATTR}="true"].mari-sa-panel-collapsed { display: none; } [${PANEL_ATTR}="true"].mari-sa-panel-expanded { display: block; animation: mari-sa-slide-down 250ms ease; } @keyframes mari-sa-slide-down { from { opacity: 0; max-height: 0; overflow: hidden; padding-top: 0; padding-bottom: 0; margin-top: 0; border-width: 0; } to { opacity: 1; max-height: 800px; } } #${ROOT_ID}.mari-unlocked { outline: 2px dashed color-mix(in srgb, var(--primary, #88c0d0) 50%, transparent); outline-offset: 4px; border-radius: 8px; } #${ROOT_ID}.mari-dragging .mari-scroll-btn { pointer-events: none; } #${ROOT_ID} .mari-drag-anchor { position: absolute; top: -8px; left: -8px; width: 18px; height: 18px; border-radius: 50%; background: var(--card, #1f2937); border: 1px solid var(--primary, #88c0d0); color: var(--primary, #88c0d0); font-size: 10px; display: none; align-items: center; justify-content: center; pointer-events: none; z-index: 1; } #${ROOT_ID}.mari-unlocked .mari-drag-anchor { display: flex; pointer-events: auto; cursor: grab; } #${ROOT_ID}.mari-dragging .mari-drag-anchor { cursor: grabbing; } .mari-arrow-icon { display: inline-block; } [data-sa-button="up"] .mari-arrow-icon { transform: translateY(-2px); } [data-sa-button="down"] .mari-arrow-icon { transform: translateY(2px); } `;
     document.head.appendChild(styleTag);
   }
-  function loadOptions() {
+  function getExtensionStorage() {
+    if (
+      typeof marinara === "undefined" ||
+      !marinara ||
+      !marinara.storage ||
+      typeof marinara.storage.get !== "function" ||
+      typeof marinara.storage.patch !== "function"
+    ) {
+      return null;
+    }
+    return marinara.storage;
+  }
+  async function loadOptions() {
+    const storage = getExtensionStorage();
+    if (storage) {
+      try {
+        const stored = await storage.get();
+        if (stored && typeof stored.options === "object" && stored.options) {
+          return { ...DEFAULT_OPTIONS, ...sanitizeOptions(stored.options) };
+        }
+        const legacy = readLegacyOptions();
+        if (legacy) {
+          await storage.patch({ options: legacy });
+          return legacy;
+        }
+        return { ...DEFAULT_OPTIONS };
+      } catch {}
+    }
+    return readLegacyOptions() || { ...DEFAULT_OPTIONS };
+  }
+  function readLegacyOptions() {
     try {
-      if (!window.localStorage) return { ...DEFAULT_OPTIONS };
+      if (!window.localStorage) return null;
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { ...DEFAULT_OPTIONS };
+      if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") return { ...DEFAULT_OPTIONS };
+      if (!parsed || typeof parsed !== "object") return null;
       return { ...DEFAULT_OPTIONS, ...sanitizeOptions(parsed) };
     } catch {
-      return { ...DEFAULT_OPTIONS };
+      return null;
     }
   }
   function sanitizeOptions(input) {
@@ -467,10 +505,20 @@
     return safe;
   }
   function persistOptions() {
-    try {
-      if (!window.localStorage) return;
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.options));
-    } catch {}
+    const snapshot = { ...state.options };
+    const storage = getExtensionStorage();
+    persistQueue = persistQueue
+      .then(async () => {
+        if (storage) {
+          await storage.patch({ options: snapshot });
+          return;
+        }
+        if (window.localStorage) {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+        }
+      })
+      .catch(() => {});
+    return persistQueue;
   }
   function createButtons() {
     if (document.getElementById(ROOT_ID)) {
@@ -1370,6 +1418,7 @@
     if (state.toggleOpen) {
       toggleBtn.classList.add("mari-toggle-open");
     }
+    stopHostRowInteraction(toggleBtn);
     toggleBtn.addEventListener("click", () => {
       state.toggleOpen = !state.toggleOpen;
       toggleBtn.classList.toggle("mari-toggle-open", state.toggleOpen);
@@ -1463,6 +1512,7 @@
   function buildOptionsPanel(showGameModeNote, showMultiInstanceWarning) {
     const panel = document.createElement("div");
     panel.setAttribute(PANEL_ATTR, "true");
+    stopHostRowInteraction(panel);
     panel.setAttribute(PANEL_GM_NOTE_ATTR, showGameModeNote ? "true" : "false");
     panel.setAttribute(
       PANEL_TRACE_ACTIONS_ATTR,
@@ -1608,6 +1658,24 @@
       panel.appendChild(traceActions);
     }
     return panel;
+  }
+  function stopHostRowInteraction(element) {
+    for (const eventName of [
+      "click",
+      "dblclick",
+      "keydown",
+      "keyup",
+      "mousedown",
+      "mouseup",
+      "pointerdown",
+      "pointerup",
+      "touchstart",
+      "touchend",
+    ]) {
+      element.addEventListener(eventName, (event) => {
+        event.stopPropagation();
+      });
+    }
   }
   function buildSelectField(labelText, currentValue, options, onChange) {
     const label = document.createElement("label");

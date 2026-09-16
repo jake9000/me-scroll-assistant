@@ -1,0 +1,13 @@
+{
+  "kind": "marinara.personal-extension",
+  "version": 1,
+  "config": {
+    "name": "Scroll Assistant",
+    "version": "1.0.0",
+    "description": "Configurable scrolling and autoscroll controls for Marinara Engine.",
+    "runtime": "client",
+    "capabilities": ["full_page_access"],
+    "jsPath": "scroll-assistant.js",
+    "cssPath": "scroll-assistant.css"
+  }
+}
